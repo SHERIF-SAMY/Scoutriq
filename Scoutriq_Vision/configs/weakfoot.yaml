@@ -1,0 +1,7 @@
+# Weak Foot Drill Config
+
+drill_params:
+  good_control_threshold_m: 0.5
+  loose_ball_threshold_m: 1.0
+  weak_shot_threshold_m: 1.3
+  smooth_window: 10

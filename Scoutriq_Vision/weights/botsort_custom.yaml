@@ -1,0 +1,22 @@
+# Custom BoTSORT configuration - AGGRESSIVE ID persistence
+# Very high track_buffer to keep IDs even when objects disappear for long periods
+
+tracker_type: botsort
+
+# Tracking parameters - AGGRESSIVE settings
+track_high_thresh: 0.15    # Very low - detect even faint objects
+track_low_thresh: 0.05     # Very low threshold for low confidence detection  
+new_track_thresh: 0.5      # Higher - harder to create NEW tracks (prevents new IDs)
+track_buffer: 150          # Keep lost tracks for 150 frames (~2.5 sec at 60fps)
+match_thresh: 0.9          # High matching threshold
+
+# Required parameter
+fuse_score: true
+
+# Motion model - use optical flow for motion compensation
+gmc_method: sparseOptFlow
+
+# Re-ID settings
+proximity_thresh: 0.6      # Slightly higher spatial tolerance
+appearance_thresh: 0.3     # Appearance matching threshold
+with_reid: false

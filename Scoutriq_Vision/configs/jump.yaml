@@ -1,0 +1,8 @@
+# Jump Test Config
+
+# Use MediaPipe for 3D depth estimation
+pose_backend: "mediapipe"
+
+drill_params:
+  min_knee_bend_deg: 160
+  flight_threshold_px: 5

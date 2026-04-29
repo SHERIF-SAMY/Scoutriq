@@ -1,0 +1,57 @@
+# ====== Python ======
+venv/
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+*.egg-info/
+dist/
+build/
+
+# ====== Environment ======
+.env
+.env.*
+!.env.example
+
+# ====== Large files & Archives ======
+*.zip
+*.tar.gz
+*.tar
+*.rar
+*.7z
+
+# ====== AI Model Weights (tracked via Git LFS) ======
+# Uncomment below if NOT using Git LFS:
+# *.pt
+# *.pth
+# *.pkl
+# *.joblib
+# *.onnx
+
+# ====== Videos & Media ======
+*.mp4
+*.avi
+*.mov
+*.mkv
+*.webm
+
+# ====== Output & temporary files ======
+output/api_runs/
+output/1/
+output/Sherif*/
+!output/.gitkeep
+
+# ====== Terraform ======
+terraform/.terraform/
+terraform/*.tfstate
+terraform/*.tfstate.backup
+terraform/out.txt
+
+# ====== OS files ======
+.DS_Store
+Thumbs.db
+
+# ====== IDE ======
+.vscode/
+.idea/

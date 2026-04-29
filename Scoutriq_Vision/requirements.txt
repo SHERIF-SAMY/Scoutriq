@@ -1,0 +1,8 @@
+ultralytics
+mediapipe
+opencv-python
+numpy<2.0.0
+imageio-ffmpeg
+pyyaml
+onnx
+onnxruntime-gpu

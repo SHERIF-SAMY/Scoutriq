@@ -1,0 +1,44 @@
+# ── Git / IDE ──
+.git
+.gitignore
+.gitattributes
+.env
+.env.example
+
+# ── Python cache ──
+__pycache__/
+*.py[cod]
+*.pyo
+.pytest_cache/
+
+# ── YOLO / ML weights (NEVER in image — mounted as volume) ──
+*.pt
+*.pth
+*.onnx
+*.engine
+scoutai/weights/
+
+# ── Videos and media (runtime data, not source) ──
+*.mp4
+*.avi
+*.mov
+*.mkv
+scoutai/videos/
+output/
+
+# ── Virtual environments ──
+venv/
+.venv/
+env/
+.env/
+
+# ── Documentation / misc ──
+README.md
+DOCKER_DEPLOY.md
+*.md
+terraform/
+frontend/
+
+# ── OS artifacts ──
+.DS_Store
+Thumbs.db

@@ -1,0 +1,11 @@
+# Seven-Cone Dribble Drill Config
+# Inherits from default.yaml values
+
+# Drill-specific parameters
+drill_params:
+  num_cones: 7
+  cone_spacing_m: 1.0
+  close_control_threshold_m: 1.0
+  touch_distance_threshold_m: 0.35
+  touch_cooldown_frames: 8
+  cone_contact_distance_m: 0.15

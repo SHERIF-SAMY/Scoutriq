@@ -1,0 +1,773 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ScoutAI - تحليل أداء اللاعبين</title>
+    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;700&family=Inter:wght@400;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --scout-green: #00FF88;
+            --scout-green-hover: #00cc6d;
+            --dark-navy: #0A0E1A;
+            --card-bg: rgba(17, 24, 39, 0.7);
+            --card-border: rgba(255, 255, 255, 0.08);
+            --text-main: #E2E8F0;
+            --text-muted: #94A3B8;
+            --purple-accent: #6C63FF;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Tajawal', sans-serif;
+        }
+
+        body {
+            background-color: var(--dark-navy);
+            color: var(--text-main);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            background-image: 
+                radial-gradient(circle at 15% 50%, rgba(0, 255, 136, 0.08), transparent 25%),
+                radial-gradient(circle at 85% 30%, rgba(108, 99, 255, 0.08), transparent 25%);
+        }
+
+        header {
+            width: 100%;
+            padding: 20px;
+            text-align: center;
+            border-bottom: 1px solid var(--card-border);
+            margin-bottom: 40px;
+        }
+
+        h1 {
+            color: var(--scout-green);
+            font-weight: 700;
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            letter-spacing: 1px;
+            font-family: 'Inter', 'Tajawal', sans-serif;
+        }
+
+        .subtitle {
+            color: var(--text-muted);
+            font-size: 1.1rem;
+        }
+
+        main {
+            width: 100%;
+            max-width: 800px;
+            padding: 0 20px;
+        }
+
+        /* Container Styles */
+        .section-container {
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 16px;
+            padding: 40px;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            display: none;
+            animation: fadeIn 0.5s ease-out;
+        }
+
+        .section-container.active {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Form Controls */
+        .form-group {
+            margin-bottom: 25px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            color: var(--text-main);
+            font-weight: 700;
+        }
+
+        input[type="text"], input[type="number"], select {
+            width: 100%;
+            padding: 12px 16px;
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid var(--card-border);
+            border-radius: 8px;
+            color: white;
+            font-size: 1rem;
+            transition: border-color 0.3s;
+        }
+
+        input[type="text"]:focus, select:focus {
+            outline: none;
+            border-color: var(--scout-green);
+        }
+
+        /* File Upload */
+        .file-upload-wrapper {
+            position: relative;
+            width: 100%;
+            height: 150px;
+            border: 2px dashed var(--scout-green);
+            border-radius: 12px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+            transition: background 0.3s;
+            margin-bottom: 20px;
+        }
+
+        .file-upload-wrapper:hover {
+            background: rgba(0, 255, 136, 0.05);
+        }
+
+        .file-upload-wrapper input[type="file"] {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            opacity: 0;
+            cursor: pointer;
+        }
+
+        .file-icon {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+        }
+
+        .file-name {
+            margin-top: 10px;
+            color: var(--scout-green);
+            font-weight: bold;
+        }
+
+        .btn {
+            width: 100%;
+            padding: 14px;
+            background: var(--scout-green);
+            color: var(--dark-navy);
+            border: none;
+            border-radius: 8px;
+            font-size: 1.1rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: transform 0.2s, background 0.2s;
+            margin-top: 10px;
+        }
+
+        .btn:hover {
+            background: var(--scout-green-hover);
+            transform: translateY(-2px);
+        }
+
+        .btn:disabled {
+            background: #444;
+            color: #888;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        /* Loading Section */
+        .loading-content {
+            text-align: center;
+        }
+
+        .spinner {
+            width: 60px;
+            height: 60px;
+            border: 4px solid rgba(0, 255, 136, 0.2);
+            border-top-color: var(--scout-green);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .progress-bar-container {
+            width: 100%;
+            height: 8px;
+            background: rgba(0,0,0,0.5);
+            border-radius: 4px;
+            margin: 20px 0;
+            overflow: hidden;
+        }
+
+        .progress-bar {
+            height: 100%;
+            width: 0%;
+            background: linear-gradient(90deg, var(--scout-green), var(--purple-accent));
+            border-radius: 4px;
+            transition: width 0.5s ease;
+        }
+
+        .status-message {
+            color: var(--text-muted);
+            height: 24px;
+            transition: opacity 0.3s;
+        }
+
+        /* Results Section */
+        .results-grid {
+            display: flex;
+            flex-direction: column;
+            gap: 30px;
+        }
+
+        .video-container {
+            width: 100%;
+            border-radius: 12px;
+            overflow: hidden;
+            border: 1px solid var(--card-border);
+            background: #000;
+        }
+
+        video {
+            width: 100%;
+            display: block;
+        }
+
+        /* Scores Area */
+        .score-hero {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 12px;
+            padding: 20px;
+            border: 1px solid var(--card-border);
+        }
+
+        .overall-score-circle {
+            width: 100px;
+            height: 100px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: conic-gradient(var(--scout-green) var(--fill, 0%), #222 var(--fill, 0%));
+            position: relative;
+        }
+
+        .overall-score-circle::before {
+            content: "";
+            position: absolute;
+            width: 80px;
+            height: 80px;
+            background: var(--dark-navy);
+            border-radius: 50%;
+        }
+
+        .score-value {
+            position: relative;
+            font-family: 'Inter', sans-serif;
+            font-size: 2rem;
+            font-weight: 700;
+            color: white;
+        }
+
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 15px;
+        }
+
+        .metric-card {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid var(--card-border);
+            border-radius: 8px;
+            padding: 15px;
+            text-align: center;
+        }
+
+        .metric-title {
+            color: var(--text-muted);
+            font-size: 0.9rem;
+            margin-bottom: 5px;
+        }
+
+        .metric-value {
+            font-family: 'Inter', sans-serif;
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--scout-green);
+        }
+
+        /* Specific Grouping Cards */
+        .metric-group {
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid var(--card-border);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .metric-group h3 {
+            margin-bottom: 15px;
+            color: var(--purple-accent);
+            border-bottom: 1px solid var(--card-border);
+            padding-bottom: 10px;
+        }
+
+        /* LLM Feedback Markdown rendering */
+        .llm-feedback-container {
+            background: rgba(108, 99, 255, 0.05);
+            border-right: 4px solid var(--purple-accent);
+            padding: 20px;
+            border-radius: 8px;
+            line-height: 1.6;
+        }
+
+        .llm-feedback-container h1, 
+        .llm-feedback-container h2, 
+        .llm-feedback-container h3 {
+            color: var(--scout-green);
+            margin-top: 20px;
+            margin-bottom: 15px;
+        }
+
+        .llm-feedback-container p {
+            margin-bottom: 15px;
+        }
+
+        .llm-feedback-container ul, 
+        .llm-feedback-container ol {
+            padding-right: 20px;
+            margin-bottom: 15px;
+        }
+
+        .llm-feedback-container li {
+            margin-bottom: 8px;
+        }
+
+        .llm-feedback-container strong {
+            color: #fff;
+        }
+
+        /* Error state */
+        .error-message {
+            color: #ff4444;
+            background: rgba(255, 68, 68, 0.1);
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 15px;
+            display: none;
+            border: 1px solid rgba(255,68,68, 0.3);
+        }
+
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>ScoutAI</h1>
+        <p class="subtitle">منصة تحليل الأداء الرياضي المدعومة بالذكاء الاصطناعي</p>
+    </header>
+
+    <main>
+        <!-- Section 1: Upload Form -->
+        <section id="uploadSection" class="section-container active">
+            <form id="uploadForm">
+                <div class="form-group">
+                    <label for="playerId">رقم/اسم اللاعب:</label>
+                    <input type="text" id="playerId" name="player_id" placeholder="مثال: player_123" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="drillSelect">اختر التمرينة (Drill):</label>
+                    <select id="drillSelect" name="drill" required>
+                        <option value="" disabled selected>جاري تحميل التمارين المتاحة...</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="playerHeight">طول اللاعب (بالأمتار):</label>
+                    <input type="number" id="playerHeight" name="player_height" step="0.01" value="1.75" required>
+                </div>
+
+                <div class="form-group">
+                    <label>فيديو الأداء (MP4, MOV):</label>
+                    <div class="file-upload-wrapper" id="dropZone">
+                        <input type="file" id="videoFile" name="video" accept="video/mp4,video/quicktime" required>
+                        <div class="file-icon">📁</div>
+                        <p>اضغط لاختيار فيديو أو اسحب الملف هنا</p>
+                        <p class="file-name" id="fileNameDisplay"></p>
+                    </div>
+                </div>
+
+                <div class="error-message" id="uploadError"></div>
+
+                <button type="submit" class="btn" id="submitBtn">🚀 ابدأ التحليل الان</button>
+            </form>
+        </section>
+
+        <!-- Section 2: Loading State -->
+        <section id="loadingSection" class="section-container">
+            <div class="loading-content">
+                <h2>جاري التحليل بالذكاء الاصطناعي...</h2>
+                <div class="spinner" style="margin-top: 30px;"></div>
+                
+                <div class="progress-bar-container">
+                    <div class="progress-bar" id="progressBar"></div>
+                </div>
+
+                <p class="status-message" id="statusMessage">جاري رفع الفيديو...</p>
+                <p style="color:#666; font-size: 0.85rem; margin-top: 15px;">قد يستغرق التحليل من 1 إلى 5 دقائق حسب طول الفيديو.</p>
+            </div>
+        </section>
+
+        <!-- Section 3: Results Dashboard -->
+        <section id="resultSection" class="section-container">
+            <h2 id="resultHeader" style="margin-bottom: 20px; color: var(--scout-green);">🏆 نتيجة التحليل</h2>
+            
+            <div class="results-grid">
+                <!-- Video Player -->
+                <div class="video-container">
+                    <video id="analyzedVideo" controls playsinline preload="auto">
+                        متصفحك لا يدعم تشغيل الفيديو.
+                    </video>
+                </div>
+
+                <!-- Score Hero -->
+                <div class="score-hero">
+                    <div>
+                        <h3 style="margin-bottom: 10px;">التقييم العام (Overall Score)</h3>
+                        <p style="color: var(--text-muted); font-size: 0.9rem;">بناءً على مقاييس التمرين المحددة</p>
+                    </div>
+                    <div class="overall-score-circle" id="overallScoreCircle">
+                        <span class="score-value" id="overallScoreValue">--</span>
+                    </div>
+                </div>
+
+                <!-- Dynamic Metrics Container -->
+                <div id="dynamicMetricsContainer">
+                    <!-- Cards will be generated here -->
+                </div>
+
+                <!-- LLM Feedback -->
+                <div id="llmFeedbackWrapper" style="display: none;">
+                    <h3>🤖 تقرير الخبير (AI Coach)</h3>
+                    <div class="llm-feedback-container" id="llmFeedbackContent">
+                        <!-- Markdown text injected here -->
+                    </div>
+                </div>
+
+                <button class="btn" id="resetBtn" style="background: transparent; border: 1px solid var(--scout-green); color: var(--scout-green); margin-top: 20px;">🔄 تحليل فيديو جديد</button>
+            </div>
+        </section>
+    </main>
+
+    <!-- Markdown Parser -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    
+    <script>
+        // DOM Elements
+        const sectUpload = document.getElementById('uploadSection');
+        const sectLoading = document.getElementById('loadingSection');
+        const sectResult = document.getElementById('resultSection');
+        
+        const form = document.getElementById('uploadForm');
+        const drillSelect = document.getElementById('drillSelect');
+        const videoFileInput = document.getElementById('videoFile');
+        const fileNameDisplay = document.getElementById('fileNameDisplay');
+        const submitBtn = document.getElementById('submitBtn');
+        const uploadError = document.getElementById('uploadError');
+        
+        // Progress elements
+        const progressBar = document.getElementById('progressBar');
+        const statusMessage = document.getElementById('statusMessage');
+        
+        // Results elements
+        const analyzedVideo = document.getElementById('analyzedVideo');
+        const dynamicMetricsContainer = document.getElementById('dynamicMetricsContainer');
+        const llmFeedbackWrapper = document.getElementById('llmFeedbackWrapper');
+        const llmFeedbackContent = document.getElementById('llmFeedbackContent');
+        const overallScoreCircle = document.getElementById('overallScoreCircle');
+        const overallScoreValue = document.getElementById('overallScoreValue');
+        
+        // Base API URL (assuming frontend served from same host, adjust if needed)
+        const API_BASE = window.location.origin;
+
+        // --- Initialization ---
+
+        async function fetchDrills() {
+            try {
+                const res = await fetch(`${API_BASE}/drills`);
+                if (!res.ok) throw new Error('Failed to fetch drills');
+                const drills = await res.json();
+                
+                drillSelect.innerHTML = '<option value="" disabled selected>اختر التمرينة...</option>';
+                drills.forEach(drill => {
+                    const opt = document.createElement('option');
+                    opt.value = drill.name;
+                    opt.textContent = `${drill.name} - ${drill.description || ''}`;
+                    drillSelect.appendChild(opt);
+                });
+            } catch (err) {
+                console.error("Error fetching drills:", err);
+                drillSelect.innerHTML = '<option value="" disabled selected>خطأ في تحميل التمارين. تأكد من عمل الخادم.</option>';
+            }
+        }
+
+        window.addEventListener('DOMContentLoaded', fetchDrills);
+
+        // --- File Input Styling ---
+
+        videoFileInput.addEventListener('change', (e) => {
+            if (e.target.files.length > 0) {
+                fileNameDisplay.textContent = e.target.files[0].name;
+            } else {
+                fileNameDisplay.textContent = '';
+            }
+        });
+
+        // --- Form Submission & Loading UI ---
+
+        let loadingInterval;
+        const fakeStatuses = [
+            "جاري رفع الفيديو للخادم...",
+            "يتم الآن تهيئة نموذج الذكاء الاصطناعي...",
+            "تحليل الحركة باستخدام YOLOv8 و MediaPipe...",
+            "حساب السرعات والمسافات الهندسية...",
+            "تقييم التحكم بالكرة وتوليد الأرقام...",
+            "إعداد التقرير الفني باستخدام Groq LLM...",
+            "حفظ الفيديو النهائي وتجهيز النتائج..."
+        ];
+
+        function startFakeProgress() {
+            let progress = 0;
+            let statusIdx = 0;
+            
+            progressBar.style.width = '0%';
+            statusMessage.textContent = fakeStatuses[0];
+            
+            loadingInterval = setInterval(() => {
+                if(progress < 90) {
+                    progress += Math.random() * 5;
+                    progressBar.style.width = `${Math.min(minProgressStatus(progress), 95)}%`;
+                }
+                
+                // Change status message roughly based on time
+                const expectedIdx = Math.floor((progress / 95) * fakeStatuses.length);
+                if (expectedIdx > statusIdx && expectedIdx < fakeStatuses.length) {
+                    statusIdx = expectedIdx;
+                    statusMessage.style.opacity = 0;
+                    setTimeout(() => {
+                        statusMessage.textContent = fakeStatuses[statusIdx];
+                        statusMessage.style.opacity = 1;
+                    }, 300);
+                }
+            }, 3000); // update every 3s
+        }
+
+        function minProgressStatus(p) {
+            return p;
+        }
+
+        function stopFakeProgress() {
+            clearInterval(loadingInterval);
+            progressBar.style.width = '100%';
+            statusMessage.textContent = "اكتمل التحليل!";
+        }
+
+        function showSection(section) {
+            [sectUpload, sectLoading, sectResult].forEach(s => s.classList.remove('active'));
+            section.classList.add('active');
+        }
+
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            uploadError.style.display = 'none';
+            
+            const formData = new FormData(form);
+            
+            showSection(sectLoading);
+            startFakeProgress();
+            submitBtn.disabled = true;
+
+            try {
+                // Important: POST to /analyze-drill
+                const res = await fetch(`${API_BASE}/analyze-drill`, {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                if (!res.ok) {
+                    const errData = await res.json().catch(()=>({}));
+                    throw new Error(errData.detail || `Server error: ${res.status}`);
+                }
+                
+                const data = await res.json();
+                stopFakeProgress();
+                setTimeout(() => renderResults(data), 500); // slight delay to show 100%
+                
+            } catch (err) {
+                stopFakeProgress();
+                showSection(sectUpload);
+                submitBtn.disabled = false;
+                uploadError.textContent = `فشل التحليل: ${err.message}`;
+                uploadError.style.display = 'block';
+                console.error(err);
+            }
+        });
+
+        // --- Metrics Rendering Engine ---
+
+        function formatCamelCaseToReadable(str) {
+            return str
+                .replace(/([A-Z])/g, ' $1')
+                .replace(/^./, (str) => str.toUpperCase())
+                .replace(/Cm$/i, ' (cm)')
+                .replace(/Mps$/i, ' (m/s)')
+                .replace(/Kmh$/i, ' (km/h)')
+                .replace(/S$/i, ' (s)')
+                .replace(/Pct$/i, ' (%)')
+                .replace(/M$/i, ' (m)');
+        }
+
+        function renderMetricCard(key, value) {
+            let displayVal = value;
+            if (typeof value === 'number') {
+                displayVal = Number.isInteger(value) ? value : value.toFixed(2);
+            } else if (typeof value === 'boolean') {
+                displayVal = value ? 'نعم' : 'لا';
+            }
+            
+            return `
+                <div class="metric-card">
+                    <div class="metric-title">${formatCamelCaseToReadable(key)}</div>
+                    <div class="metric-value">${displayVal}</div>
+                </div>
+            `;
+        }
+
+        function renderResults(data) {
+            document.getElementById('resultHeader').textContent = `🏆 نتيجة التحليل - ${data.playerId || 'لاعب'} - ${data.drillType || ''}`;
+            
+            // 1. Video Player
+            if (data.video && data.video.analyzedVideoUrl) {
+                const videoUrl = data.video.analyzedVideoUrl;
+                console.log('Loading video from:', videoUrl);
+                analyzedVideo.src = videoUrl;
+                // Wait for enough data before playing
+                analyzedVideo.oncanplay = () => {
+                    console.log('Video ready to play');
+                    analyzedVideo.play().catch(e => console.log('Autoplay blocked (user gesture required):', e));
+                    analyzedVideo.oncanplay = null;
+                };
+                analyzedVideo.onerror = (e) => {
+                    console.error('Video load error:', analyzedVideo.error);
+                };
+                analyzedVideo.load();
+            } else {
+                console.warn('No video URL returned by backend.');
+            }
+
+            // 2. Score
+            const rawScore = data.overallScore !== undefined ? data.overallScore : 0;
+            const scoreNum = Number(rawScore) || 0;
+            overallScoreValue.textContent = scoreNum.toFixed(1);
+            overallScoreCircle.style.setProperty('--fill', `${scoreNum}%`);
+            
+            // Color code score
+            const scoreColor = scoreNum >= 80 ? '#00FF88' : (scoreNum >= 50 ? '#FFD700' : '#FF4444');
+            overallScoreCircle.style.background = `conic-gradient(${scoreColor} var(--fill, 0%), #222 var(--fill, 0%))`;
+            overallScoreValue.style.color = scoreColor;
+
+            // 3. Dynamic Metrics
+            dynamicMetricsContainer.innerHTML = '';
+            
+            // Exclude non-metric fields from dynamic cards
+            const excludeKeys = ['playerId', 'drillType', 'video', 'overallScore', 'llmFeedback', 'formAssessment', 'errors'];
+            
+            Object.entries(data).forEach(([key, value]) => {
+                if (excludeKeys.includes(key) || value == null) return;
+                
+                if (typeof value === 'object' && !Array.isArray(value)) {
+                    // It's a group of metrics (e.g. timeMetrics, jumpMetrics)
+                    let innerCardsHTML = '';
+                    Object.entries(value).forEach(([subKey, subVal]) => {
+                        if (typeof subVal === 'number' || typeof subVal === 'boolean' || typeof subVal === 'string') {
+                            innerCardsHTML += renderMetricCard(subKey, subVal);
+                        }
+                    });
+                    
+                    if (innerCardsHTML) {
+                        const groupDiv = document.createElement('div');
+                        groupDiv.className = 'metric-group';
+                        groupDiv.innerHTML = `
+                            <h3>${formatCamelCaseToReadable(key)}</h3>
+                            <div class="metrics-grid">
+                                ${innerCardsHTML}
+                            </div>
+                        `;
+                        dynamicMetricsContainer.appendChild(groupDiv);
+                    }
+                } else if (typeof value === 'number' || typeof value === 'boolean' || typeof value === 'string') {
+                    // Standalone metric
+                    const grid = document.createElement('div');
+                    grid.className = 'metrics-grid';
+                    grid.style.marginBottom = '20px';
+                    grid.innerHTML = renderMetricCard(key, value);
+                    dynamicMetricsContainer.appendChild(grid);
+                }
+            });
+
+            // Handle Errors section if exists
+            if (data.errors) {
+                 const errDiv = document.createElement('div');
+                 errDiv.className = 'metric-group';
+                 errDiv.style.borderColor = 'rgba(255, 68, 68, 0.3)';
+                 let innerCardsHTML = '';
+                 Object.entries(data.errors).forEach(([k,v]) => {
+                     innerCardsHTML += renderMetricCard(k,v);
+                 });
+                 if (innerCardsHTML) {
+                     errDiv.innerHTML = `<h3 style="color: #ff4444;">الأخطاء والمخالفات</h3><div class="metrics-grid">${innerCardsHTML}</div>`;
+                     dynamicMetricsContainer.appendChild(errDiv);
+                 }
+            }
+
+            // 4. LLM Feedback with Markdown
+            if (data.llmFeedback) {
+                llmFeedbackWrapper.style.display = 'block';
+                // Use DOMPurify in prod if you expect user HTML, but marked is acceptable here.
+                llmFeedbackContent.innerHTML = marked.parse(data.llmFeedback);
+            } else if (data.formAssessment) { // Fallback if no LLM
+                 llmFeedbackWrapper.style.display = 'block';
+                 llmFeedbackContent.innerHTML = marked.parse(data.formAssessment);
+            } else {
+                llmFeedbackWrapper.style.display = 'none';
+            }
+
+            showSection(sectResult);
+        }
+
+        // --- Reset ---
+        document.getElementById('resetBtn').addEventListener('click', () => {
+            form.reset();
+            fileNameDisplay.textContent = '';
+            submitBtn.disabled = false;
+            // Stop video
+            analyzedVideo.pause();
+            analyzedVideo.removeAttribute('src'); // clear source
+            analyzedVideo.load();
+            showSection(sectUpload);
+        });
+
+    </script>
+</body>
+</html>

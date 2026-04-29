@@ -1,0 +1,54 @@
+# Python bytecode
+__pycache__/
+*.py[cod]
+*$py.class
+
+# ML Models and weights (ignore large files for GitHub)
+*.pt
+*.task
+*.onnx
+*.engine
+*.weights
+*.pb
+
+# Project Outputs
+output/
+*_out/
+reports/
+
+# Multimedia (Input/Output videos)
+*.mp4
+*.MOV
+*.avi
+*.mkv
+*.webm
+
+# Temporary and Compressed files
+*.rar
+*.zip
+*.7z
+*.tmp
+*.log
+
+# Environment and IDE
+.env
+.venv
+env/
+venv/
+.vscode/
+.idea/
+.DS_Store
+
+# Jupyter Notebooks
+.ipynb_checkpoints
+
+# Test & debug scripts
+check_cuda.py
+test_model.py
+test_swimming_base_yolo.py
+test_swimming_detection.py
+
+# Local folders
+crash/
+scripts/
+videos/

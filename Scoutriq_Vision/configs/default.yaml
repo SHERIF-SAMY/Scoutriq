@@ -1,0 +1,37 @@
+# ScoutAI Default Configuration
+# Override per-drill with drill-specific YAML or CLI args
+
+# Model paths (relative to project root or absolute)
+object_model_path: "Scoutriq_Vision/weights/best2.pt"
+pose_model_path: "Scoutriq_Vision/weights/yolov8m-pose.pt"
+tracker_config_path: "Scoutriq_Vision/weights/botsort_custom.yaml"
+
+# Pose backend: "yolo" or "mediapipe"
+pose_backend: "yolo"
+
+# Player physical properties
+player_height_m: 1.75
+football_diameter_m: 0.215
+
+# Detection thresholds
+object_confidence: 0.01
+pose_confidence: 0.5
+pose_iou: 0.7
+keypoint_confidence: 0.3
+
+# Keypoint smoothing
+kp_smoothing_factor: 0.3
+kp_history_size: 3
+position_smoothing: 0.3
+
+# Tracker
+stable_tracker_threshold: 80
+player_tracker_threshold: 150
+
+# Output
+output_dir: "./output"
+
+# Ball class names (case-insensitive matching)
+ball_class_names:
+  - "football"
+  - "ball"

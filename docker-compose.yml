@@ -1,0 +1,50 @@
+version: "3.8"
+
+services:
+  scoutai:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: scoutai:gpu
+    container_name: scoutai_api
+    restart: unless-stopped
+
+    # ── GPU access via NVIDIA Container Toolkit ──
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1 # use 1 GPU (change to 'all' for multi-GPU)
+              capabilities: [ gpu ]
+
+    # ── Port mapping ──
+    ports:
+      - "8000:8000"
+
+    # ── Volume mounts ──
+    volumes:
+      # Weights: populated at startup by entrypoint script, cached between restarts
+      - ./scoutai/weights:/app/scoutai/weights
+      # Output: analyzed videos + JSON artifacts written here
+      - ./output:/app/output
+      # Environment: read-only .env file
+      - ./.env:/app/.env:ro
+
+    # ── Environment variables ──
+    environment:
+      - NVIDIA_VISIBLE_DEVICES=all
+      - NVIDIA_DRIVER_CAPABILITIES=compute,utility
+      # Optional: URL to download your custom best2.pt (ball/cone detection model)
+      # - CUSTOM_WEIGHTS_URL=https://your-storage.com/best2.pt
+
+      # ── Health check ──
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:8000/" ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s # allow time for model warm-up
+
+    # ── Runtime (legacy docker-compose syntax for GPU) ──
+    runtime: nvidia
