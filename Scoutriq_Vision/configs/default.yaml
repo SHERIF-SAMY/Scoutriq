@@ -2,8 +2,8 @@
 # Override per-drill with drill-specific YAML or CLI args
 
 # Model paths (relative to project root or absolute)
-object_model_path: "Scoutriq_Vision/weights/best2.pt"
-pose_model_path: "Scoutriq_Vision/weights/yolov8m-pose.pt"
+object_model_path: "Scoutriq_Vision/weights/best2.onnx"
+pose_model_path: "Scoutriq_Vision/weights/yolov8m-pose.onnx"
 tracker_config_path: "Scoutriq_Vision/weights/botsort_custom.yaml"
 
 # Pose backend: "yolo" or "mediapipe"

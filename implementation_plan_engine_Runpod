@@ -1,0 +1,51 @@
+# Migrate Scoutriq Vision to TensorRT (.engine) on RunPod
+
+Deploy Scoutriq Vision to a RunPod cloud instance using TensorRT (`.engine`) models to achieve maximum inference performance. Since TensorRT engines are highly specific to the GPU architecture and TensorRT version, models must be exported directly on the target RunPod hardware.
+
+> [!IMPORTANT]
+> The existing `.engine` files in your local `weights/` directory (e.g. `best2.engine`) will likely crash on RunPod with a TensorRT architecture mismatch error unless the RunPod instance has the exact same GPU as your local machine.
+
+## User Review Required
+
+- Please review the steps below. The primary change is that we will use `.pt` files to generate new `.engine` files *on the RunPod instance itself*, rather than uploading the local `.engine` files.
+
+## Open Questions
+
+> [!WARNING]
+> 1. Do you want me to create an automated shell script (e.g., `setup_runpod.sh`) that you can run on your RunPod instance to handle the environment setup and model export automatically?
+> 2. Are you provisioning a bare-metal/native pod (via SSH/Jupyter) or do you want to wrap this in a RunPod Serverless Docker container eventually?
+
+## Proposed Changes
+
+### Setup and Export Phase (On RunPod)
+
+We will execute the following steps on the RunPod instance to ensure hardware compatibility:
+
+1. **Environment Setup**: Use the default "RunPod PyTorch" template (which includes CUDA and TensorRT). Install project dependencies (`pip install -r requirements.txt`).
+2. **Model Compilation**: Run the Ultralytics export commands to compile the `.pt` models into `.engine` format optimized for the specific RunPod GPU:
+   ```bash
+   yolo export model=Scoutriq_Vision/weights/best2.pt format=engine workspace=4 half=True
+   yolo export model=Scoutriq_Vision/weights/yolov8m-pose.pt format=engine workspace=4 half=True
+   ```
+   *(Note: `workspace=4` allocates 4GB of VRAM for compilation, and `half=True` enables FP16 precision for faster inference).*
+
+### Project Configuration Updates
+
+#### [MODIFY] [default.yaml](file:///d:/ScoutAI_TAM_DEMO_onnx_v6/ScoutAI_TAM_DEMO_onnx_v6/Scoutriq_Vision/configs/default.yaml)
+Update the default configuration to point to the newly generated `.engine` models instead of `.onnx`.
+
+```yaml
+# Model paths (relative to project root or absolute)
+object_model_path: "Scoutriq_Vision/weights/best2.engine"
+pose_model_path: "Scoutriq_Vision/weights/yolov8m-pose.engine"
+```
+
+*Note: No changes are required in `base_drill.py` or `pose_backend.py` because the `ultralytics` YOLO constructor automatically detects the `.engine` extension and routes it through the TensorRT backend.*
+
+## Verification Plan
+
+### Manual Verification
+1. Provision the RunPod instance and transfer the repository.
+2. Run the export commands to generate the `.engine` files.
+3. Start the FastAPI backend: `uvicorn api:app --host 0.0.0.0 --port 8000`.
+4. Submit a video payload via the API and verify that inference completes successfully and utilizes the GPU effectively (monitor with `watch -n 1 nvidia-smi`).

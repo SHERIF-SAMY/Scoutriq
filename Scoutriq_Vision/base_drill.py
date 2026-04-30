@@ -35,6 +35,15 @@ from .visualization.drawing import draw_pose, draw_custom_box
 from .visualization.overlay import MetricsPanel, draw_error_banner
 
 
+# ═══════════════════════════════════════════════════════════════
+#  Module-level model cache — persists across API requests
+#  Key: model path (str)  →  Value: loaded model instance
+# ═══════════════════════════════════════════════════════════════
+
+_OBJECT_MODEL_CACHE: dict = {}   # model_path → YOLO detect instance
+_POSE_BACKEND_CACHE: dict = {}   # "backend:model_path" → PoseBackend instance
+
+
 class _NumpyEncoder(json.JSONEncoder):
     """Handle numpy types that json.dump can't serialize."""
 
@@ -282,9 +291,20 @@ class BaseDrillAnalyzer(ABC):
             if not raw_frames:
                 break
 
+            actual_batch_size = len(raw_frames)
+
+            # ── Pad the batch to keep ONNX input shape constant ──
+            # If the last batch is smaller than batch_size, ONNX Runtime will re-allocate memory
+            # and re-benchmark CUDA kernels, causing a 10+ second delay. Padding fixes this.
+            if actual_batch_size < batch_size:
+                pad_frames = [np.zeros_like(raw_frames[0])] * (batch_size - actual_batch_size)
+                inference_frames = raw_frames + pad_frames
+            else:
+                inference_frames = raw_frames
+
             # ── Batch GPU inference ──
-            obj_results = self._get_batch_objects(raw_frames, class_names)
-            pose_results = self._get_batch_poses(raw_frames)
+            obj_results = self._get_batch_objects(inference_frames, class_names)[:actual_batch_size]
+            pose_results = self._get_batch_poses(inference_frames)[:actual_batch_size]
 
             # ── Per-frame sequential post-processing ──
             for i, frame in enumerate(raw_frames):
@@ -398,7 +418,9 @@ class BaseDrillAnalyzer(ABC):
         print(f"📄 Report saved to: {output_report_path}")
 
         # ── Cleanup ──
-        if self._pose_backend:
+        # Only close pose backend if it is NOT a shared cached instance.
+        # Cached backends must stay alive for reuse across requests.
+        if self._pose_backend and self._pose_backend not in _POSE_BACKEND_CACHE.values():
             self._pose_backend.close()
 
         return report
@@ -408,26 +430,45 @@ class BaseDrillAnalyzer(ABC):
     # ═══════════════════════════════════════════════════════════
 
     def _load_models(self) -> None:
-        """Load YOLO object detection and pose estimation models."""
+        """Load YOLO object detection and pose estimation models.
+        
+        Models are cached at the module level so they are only loaded once
+        per server lifetime — subsequent requests reuse the cached instances.
+        """
         from ultralytics import YOLO
 
         if self.config.object_model_path:
-            # Explicitly set task='detect' for ONNX to avoid warnings
-            task = "detect"
-            self._object_model = YOLO(self.config.object_model_path, task=task)
-            
-            # .to() is only for .pt files. For ONNX, device is passed in predict/track.
-            if self.config.object_model_path.endswith(".pt"):
-                self._object_model.to(self.config.device)
+            obj_key = self.config.object_model_path
+            if obj_key in _OBJECT_MODEL_CACHE:
+                print(f"[Model Cache HIT]  Reusing cached object model: {obj_key}")
+                self._object_model = _OBJECT_MODEL_CACHE[obj_key]
+            else:
+                print(f"[Model Cache MISS] Loading object model: {obj_key}")
+                model = YOLO(obj_key, task="detect")
+                # .to() is only for .pt files. For ONNX, device is passed in predict/track.
+                if obj_key.endswith(".pt"):
+                    model.to(self.config.device)
+                _OBJECT_MODEL_CACHE[obj_key] = model
+                self._object_model = model
+                print(f"[Model Cache]      Object model cached ✓")
 
-        self._pose_backend = create_pose_backend(
-            backend_name=self.config.pose_backend,
-            model_path=self.config.pose_model_path,
-            confidence=self.config.pose_confidence,
-            iou=self.config.pose_iou,
-            imgsz=self.config.pose_imgsz,
-            device=self.config.device,
-        )
+        pose_key = f"{self.config.pose_backend}:{self.config.pose_model_path}"
+        if pose_key in _POSE_BACKEND_CACHE:
+            print(f"[Model Cache HIT]  Reusing cached pose backend: {pose_key}")
+            self._pose_backend = _POSE_BACKEND_CACHE[pose_key]
+        else:
+            print(f"[Model Cache MISS] Loading pose backend: {pose_key}")
+            backend = create_pose_backend(
+                backend_name=self.config.pose_backend,
+                model_path=self.config.pose_model_path,
+                confidence=self.config.pose_confidence,
+                iou=self.config.pose_iou,
+                imgsz=self.config.pose_imgsz,
+                device=self.config.device,
+            )
+            _POSE_BACKEND_CACHE[pose_key] = backend
+            self._pose_backend = backend
+            print(f"[Model Cache]      Pose backend cached ✓")
 
     def _get_batch_objects(self, frames: list[np.ndarray], class_names: dict) -> list:
         """Run object detection on a batch of frames."""

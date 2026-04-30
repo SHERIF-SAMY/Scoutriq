@@ -1,5 +1,10 @@
 import os
+import logging
 from dotenv import load_dotenv
+
+# Suppress Ultralytics warnings
+os.environ["YOLO_VERBOSE"] = "False"
+logging.getLogger("ultralytics").setLevel(logging.ERROR)
 
 load_dotenv()
 
@@ -394,6 +399,50 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+@app.on_event("startup")
+async def startup_event():
+    """Pre-warm the model cache so the first request is fast."""
+    print("Pre-warming model cache...")
+    try:
+        configs_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "Scoutriq_Vision", "configs")
+        default_config_path = os.path.join(configs_dir, "default.yaml")
+        if os.path.exists(default_config_path):
+            config = DrillConfig.from_yaml(default_config_path)
+        else:
+            config = DrillConfig()
+            
+        if DRILL_REGISTRY:
+            # Pick any available drill to instantiate and load models
+            drill_name = next(iter(DRILL_REGISTRY.keys()))
+            AnalyzerClass = get_analyzer_class(drill_name)
+            analyzer = AnalyzerClass(config)
+            analyzer._load_models()
+            
+            # Force ONNX Runtime to initialize the InferenceSessions by running a dummy frame
+            # This prevents Ultralytics from lazily loading the ONNX files during the first request
+            import numpy as np
+            print(f"Warming up ONNX Runtime with a dummy batch of {config.batch_size} frames...")
+            dummy_frame = np.zeros((640, 640, 3), dtype=np.uint8)
+            dummy_batch = [dummy_frame] * max(1, config.batch_size)
+            
+            if analyzer._object_model:
+                kwargs = dict(
+                    persist=True,
+                    conf=config.object_confidence,
+                    verbose=False,
+                    imgsz=config.object_imgsz,
+                    device=config.device,
+                    half=True,
+                )
+                _ = analyzer._object_model.track(dummy_batch, **kwargs)
+                
+            if getattr(analyzer, '_pose_backend', None):
+                _ = analyzer._pose_backend.detect_batch(dummy_batch)
+                
+            print("Model cache pre-warmed successfully!")
+    except Exception as e:
+        print(f"Warning: Failed to pre-warm models: {e}")
+
 # Mount the output directory to serve analyzed videos directly
 app.mount("/videos", StaticFiles(directory="output"), name="videos")
 # Frontend is served separately — not included in Docker image
@@ -438,7 +487,7 @@ async def analyze_drill(
         os.close(fd)
         
         with open(temp_video_path, "wb") as buffer:
-            shutil.copyfileobj(video.file, buffer)
+            shutil.copyfileobj(video.file, buffer, length=1024 * 1024 * 10)  # 10MB chunks for faster copying
             
         print(f"Video saved to {temp_video_path}")
         

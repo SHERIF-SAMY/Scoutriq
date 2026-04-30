@@ -231,6 +231,9 @@ class TTestAnalyzer(BaseDrillAnalyzer):
         self.last_player_pos = p_pos
         
         p_m = self._to_2d_m(p_pos)
+        if p_m is None:
+            return
+            
         self.player_path_m.append(p_m)
         
         # Determine current section
@@ -278,7 +281,7 @@ class TTestAnalyzer(BaseDrillAnalyzer):
                 self.form_total_frames[current_section] += 1
                         
         # Waypoint tracking in 2D Space
-        if self.current_waypoint_idx < len(self.expected_sequence):
+        if self.mapped_cones and self.current_waypoint_idx < len(self.expected_sequence):
             target_wp = self.expected_sequence[self.current_waypoint_idx]
             target_id = self.mapped_cones[target_wp]
             target_pos_px = self.cones[target_id]
